@@ -1,3 +1,4 @@
+//Testing with two addresses
 const { assert } = require("chai");
 
 const Token = artifacts.require("Token");
