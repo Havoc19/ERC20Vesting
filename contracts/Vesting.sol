@@ -23,6 +23,7 @@ contract Vesting is Ownable, ReentrancyGuard{
     address[] private payeesAddress;
     IERC20 token; 
 
+    // Adding address of payee - dynamic
     constructor(address[] memory _payees,address _token) {
         require(_payees.length > 0,"No Payees");
         require(_token != address(0x0));
@@ -39,6 +40,7 @@ contract Vesting is Ownable, ReentrancyGuard{
 
     //12 Months - 31556926 in seconds
     //1 minute - 60 in seconds
+    //Stop Time - Time when vesting should stop,_duration - each duration when token should be released
     function startVesting(uint _stopTime,uint _duration) public onlyOwner {
         require(block.timestamp.add(_stopTime) > block.timestamp,"Stop time not accepted");
         require(_duration > 0,"Zero cannot be value");
@@ -50,6 +52,7 @@ contract Vesting is Ownable, ReentrancyGuard{
         emit VestingStarted(startTime, stopTime, duration);
     }
 
+    //Calculated Total Vested Amount from start time to current time
     function calculateTotalVestedAmount() public view returns(uint){
         require(start == true,"Vesting not started");
         uint time = block.timestamp;
@@ -59,7 +62,8 @@ contract Vesting is Ownable, ReentrancyGuard{
         return(((time.sub(startTime)).div(60)).mul(tokenToBeReleasedPerDuration));
     }
 
-
+    //Payee can release their vested amount
+    //_payee - address of eligible payee 
     function release(address _payee) public nonReentrant{
         require(payees[_payee] == true,"Not Eligible");
         uint _amount = calculateTotalVestedAmount().div(payeesLength).sub(totalTokenWithdrawn[_payee]);
@@ -68,18 +72,23 @@ contract Vesting is Ownable, ReentrancyGuard{
         emit TokenReleased(_amount, _payee);
     }
 
+    //Payees token vested but yet not released
+    //_payee - address of eligible payee
     function tokenToBeReleased(address _payee) public view returns(uint){
         return(calculateTotalVestedAmount().div(payeesLength).sub(totalTokenWithdrawn[_payee]));
     }
 
+    //Owner can deposit their ERC20 tokens
     function deposit() payable public onlyOwner{
         SafeERC20.safeTransferFrom(token,msg.sender,address(this), token.balanceOf(msg.sender));
     }
 
+    //Checking balance of contract
     function checkBalance() public view returns(uint){
         return(token.balanceOf(address(this)));
     }
 
+    //Checking Eligible payees
     function checkEligibleAddress() public view returns(address[] memory){
         return payeesAddress;
     }
